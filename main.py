@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 plt.style.use('fivethirtyeight')
-df = web.DataReader('BTC-USD',data_source='yahoo',start='2012-01-01',end='2022-06-29')
+df = web.DataReader('^GSPC',data_source='yahoo',start='2012-01-01',end='2022-06-29')
 data = df[["Close"]]
 dataset = data.values
 training_data_len = math.ceil(len(dataset) * .8)
@@ -64,16 +64,16 @@ train = data[:training_data_len]
 valid = data[training_data_len:]
 valid['Predictions'] = predictions
 
-# plt.figure(figsize=(16,8))
-# plt.title('Model')
-# plt.xlabel('Date',fontsize=18)
-# plt.ylabel('Close Price USD($)',fontsize=18)
-# plt.plot(train['Close'])
-# plt.plot(valid[['Close','Predictions']])
-# plt.legend(['Train','Val','Predictions'],loc='lower right')
-# plt.show()
+plt.figure(figsize=(16,8))
+plt.title('Model')
+plt.xlabel('Date',fontsize=18)
+plt.ylabel('Close Price USD($)',fontsize=18)
+plt.plot(train['Close'])
+plt.plot(valid[['Close','Predictions']])
+plt.legend(['Train','Val','Predictions'],loc='lower right')
+plt.show()
 
-df = web.DataReader('BTC-USD',data_source='yahoo',start='2012-01-01',end='2022-06-29')
+df = web.DataReader('^GSPC',data_source='yahoo',start='2012-01-01',end='2022-06-29')
 data = df[["Close"]]
 last_60_days = data[-60:].values
 last_60_days_scaled = scaler.transform(last_60_days)
@@ -86,5 +86,5 @@ prediction_new = model.predict(x_test_new)
 prediction_new = scaler.inverse_transform(prediction_new)
 print(prediction_new)
 
-df = web.DataReader('BTC-USD',data_source='yahoo',start='2022-06-29', end='2022-06-29')
+df = web.DataReader('^GSPC',data_source='yahoo',start='2022-06-29', end='2022-06-29')
 print(df["Close"])
