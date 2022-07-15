@@ -3,10 +3,14 @@ import pandas_datareader as web
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, scale
+import joblib
 from keras.models import Sequential
-from keras.layers import Dense, LSTM
+from keras.layers import Dense, LSTM, Masking
+from keras.models import load_model
 import matplotlib.pyplot as plt
 from prepare_data import get_data
+
+MASK_VALUE = 666
 
 
 def get_trends(df):
@@ -21,33 +25,45 @@ def get_trends(df):
 def get_dataset(train_data, trends, scaled_data):
     X = []
     Y = []
+    highest_value = 0
+    for val in train_data["trend"].unique().tolist():
+        s = df['trend'].eq(val)
+        r = (~s).cumsum()[s].value_counts().max()
+        highest_value = r if r > highest_value else highest_value
+
     trends_ = list(trends["Date"])
     print("trends: ", len(trends_))
     latest_position = 0
-    i = 0
     for start, end in list(zip(trends_, trends_[1:])):
         zigzag_trend = train_data[
             (train_data["Date"] >= start) &
             (train_data["Date"] < end)
         ]
         values = zigzag_trend.values
-        X.append(
-           scaled_data[latest_position:latest_position + len(values), :-1].tolist()
+        batch = scaled_data[
+            latest_position:latest_position +
+            len(values), :-1
+        ].tolist()
+        batch.extend(
+            [[MASK_VALUE] * len(batch[0])]
+            * (highest_value - len(batch))
         )
+        X.append(batch)
         Y.append(scaled_data[latest_position, -1])
         latest_position += len(values)
-        i += 1
-        if i == 2:
-            break
     print("slices: ", len(X))
     return X, Y
 
 
 def create_model():
     model = Sequential()
-    model.add(LSTM(
-        50, return_sequences=True, 
+    model.add(Masking(
+        mask_value=MASK_VALUE,
         input_shape=(None, 4)
+    ))
+    model.add(LSTM(
+        50, return_sequences=True,
+        input_shape=(None, 5)
     ))
     model.add(LSTM(50, return_sequences=False))
     model.add(Dense(25))
@@ -56,43 +72,48 @@ def create_model():
 
 
 # try:
-#     df = pd.read_csv("test.csv")
-#     df = df.iloc[:, 1:]
+#     X = np.load('X.npy')
+#     Y = np.load('Y.npy')
+#     scaler = joblib.load("scaler.save") 
 # except FileNotFoundError:
-#     print("Setting up data")
-#     get_data()
-#     df = pd.read_csv("test.csv")
+try:
+    df = pd.read_csv("test.csv")
+    df = df.iloc[:, 1:]
+except FileNotFoundError:
+    print("Setting up data")
+    get_data()
+    df = pd.read_csv("test.csv")
 
-# trends = get_trends(df)
-# scaler = MinMaxScaler(feature_range=(0, 1))
-# training_data_len = math.ceil(len(df.values) * .8)
-
+trends = get_trends(df)
+scaler = MinMaxScaler(feature_range=(0, 1))
+scaled_data = df.iloc[:, 1:].values
 # scaled_data = scaler.fit_transform(
 #     df.iloc[:, 1:].values
 # )  # shape (70718, 5)
+joblib.dump(scaler, "scaler.save") 
+X, Y = get_dataset(df, trends, scaled_data)
+# np.save("X.npy", X)
+# np.save("Y.npy", Y)
 
-# X, Y = get_dataset(df, trends, scaled_data)
-
-# x_train = X[:training_data_len]
-# y_train = Y[:training_data_len]
-# x_train = np.array(x_train, dtype=object)
-# # y_train = np.array(y_train, dtype=object)
-
-# print(x_train)
-# print(y_train)
-
-x_train = [
-    [ np.array([1,2,3]), np.array([4,5,6]) ],
-    [ np.array([7,8,9]) ],
-]
-x_train = np.array(x_train, dtype=object)
-y_train = np.array([1,0])
-print(x_train)
+training_data_len = math.ceil(len(Y) * .8)
+x_train = X[:training_data_len]
+y_train = Y[:training_data_len]
+x_train = np.array(x_train)
+y_train = np.array(y_train)
 print(y_train)
+try:
+    model = load_model('my_model.h5')
+except IOError:
+    model = create_model()
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(x_train, y_train, batch_size=1, epochs=1)
+    model.save('my_model.h5')
 
-model = create_model()
-model.compile(optimizer='adam', loss='mean_squared_error')
-model.fit(x_train, y_train, batch_size=1, epochs=1)
+
+predictions = model.predict(x_train)
+predictions = scaler.inverse_transform(predictions)
+print("y_train: ", y_train, len(y_train))
+print("predictions: ", predictions, len(predictions))
 
 # create the testing data set
 # test_data = scaled_data[training_data_len-60:, :]
