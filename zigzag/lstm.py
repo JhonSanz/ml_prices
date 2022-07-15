@@ -1,4 +1,5 @@
 import math
+from termcolor import colored
 import pandas_datareader as web
 import numpy as np
 import pandas as pd
@@ -23,6 +24,8 @@ def get_trends(df):
 
 
 def get_dataset(train_data, trends, scaled_data):
+    print(colored('Generating data set.', 'yellow'))
+
     X = []
     Y = []
     highest_value = 0
@@ -52,18 +55,21 @@ def get_dataset(train_data, trends, scaled_data):
         Y.append(scaled_data[latest_position, -1])
         latest_position += len(values)
     print("slices: ", len(X))
+    print(colored('Data set done.', 'green'))
     return X, Y
 
 
 def create_model():
+    print(colored('Generating LSTM model.', 'yellow'))
+
     model = Sequential()
     model.add(Masking(
         mask_value=MASK_VALUE,
-        input_shape=(None, 4)
+        input_shape=(None, 7)
     ))
     model.add(LSTM(
         50, return_sequences=True,
-        input_shape=(None, 5)
+        input_shape=(None, 8)
     ))
     model.add(LSTM(50, return_sequences=False))
     model.add(Dense(25))
@@ -71,49 +77,64 @@ def create_model():
     return model
 
 
-# try:
-#     X = np.load('X.npy')
-#     Y = np.load('Y.npy')
-#     scaler = joblib.load("scaler.save") 
-# except FileNotFoundError:
 try:
-    df = pd.read_csv("test.csv")
-    df = df.iloc[:, 1:]
+    X = np.load('resources/X.npy')
+    Y = np.load('resources/Y.npy')
+    scaler = joblib.load("resources/scaler.save")
 except FileNotFoundError:
-    print("Setting up data")
-    get_data()
-    df = pd.read_csv("test.csv")
+    try:
+        df = pd.read_csv("resources/test.csv")
+        df = df.iloc[:, 1:]
+    except FileNotFoundError:
+        print(colored('Creating missing file.', 'red'))
+        get_data()
+        df = pd.read_csv("resources/test.csv")
 
-trends = get_trends(df)
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = df.iloc[:, 1:].values
-# scaled_data = scaler.fit_transform(
-#     df.iloc[:, 1:].values
-# )  # shape (70718, 5)
-joblib.dump(scaler, "scaler.save") 
-X, Y = get_dataset(df, trends, scaled_data)
-# np.save("X.npy", X)
-# np.save("Y.npy", Y)
+    trends = get_trends(df)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(
+        df.iloc[:, 1:].values
+    )  # shape (70718, 5)
+    joblib.dump(scaler, "resources/scaler.save")
+    X, Y = get_dataset(df, trends, scaled_data)
+    np.save("resources/X.npy", X)
+    np.save("resources/Y.npy", Y)
 
 training_data_len = math.ceil(len(Y) * .8)
 x_train = X[:training_data_len]
 y_train = Y[:training_data_len]
 x_train = np.array(x_train)
 y_train = np.array(y_train)
-print(y_train)
+
 try:
-    model = load_model('my_model.h5')
+    print(colored('Model loaded successfully', 'green'))
+    model = load_model('resources/my_model.h5')
 except IOError:
+    print(colored('Training...', 'yellow'))
     model = create_model()
     model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(x_train, y_train, batch_size=1, epochs=1)
-    model.save('my_model.h5')
+    model.fit(x_train, y_train, batch_size=1, epochs=5)
+    model.save('resources/my_model.h5')
 
 
 predictions = model.predict(x_train)
-predictions = scaler.inverse_transform(predictions)
+# predictions = scaler.inverse_transform(predictions)
 print("y_train: ", y_train, len(y_train))
 print("predictions: ", predictions, len(predictions))
+
+# data = [[11846.0,11828.75,11758.0,11750.0,0]]
+# some = scaler.transform(data)
+# some = [[list(some[0][:-1])]]
+# print(some)
+
+
+# prediction_2 = model.predict(some)
+# print(prediction_2)
+
+
+
+
+
 
 # create the testing data set
 # test_data = scaled_data[training_data_len-60:, :]

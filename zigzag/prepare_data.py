@@ -1,24 +1,21 @@
+from termcolor import colored
 import pandas as pd
+import pandas_ta as ta
 
 
 def get_x_train(train_data, trends):
+    print(colored('Generating trends', 'yellow'))
     aux = train_data.copy()
     aux["trend"] = None
     trends_ = list(trends["Date"])
-    # aux.loc[
-    #     ((aux["Date"] >= "2022.06.29 15:00") & (aux["Date"] <= "2022.07.13 22:30")),
-    #     ["trend"]
-    # ] = 70
-    for start, end in list(zip(trends_, trends_[1:]))[::2]:
-        # print("start  ", start, "  end: ", end)
-        aux.loc[
-            ((aux["Date"] >= start) & (aux["Date"] <= end)),
-            ["trend"]
-        ] = 1 if (
+    for start, end in list(zip(trends_, trends_[1:])):
+        mask = (aux["Date"] >= start) & (aux["Date"] <= end)
+        aux.loc[mask, "trend"] = 1 if (
             list(trends[trends["Date"] == start]["Zigzag"])[0] <
             list(trends[trends["Date"] == end]["Zigzag"])[0]
         ) else -1
-    print(aux)
+    aux = aux[aux["Date"] > trends_[0]]
+    aux = aux[aux["Date"] < trends_[-1]]
     return aux
 
 
@@ -30,14 +27,25 @@ def get_data():
             "Low", "ZigzagMax", "ZigzagMin"
         ]
     )
+    print(colored('Adding indicators', 'yellow'))
+    df.ta.ao(
+        high="high", low="low", slow=500,
+        fast=1, append=True
+    )
+    df.ta.sma(length=500, append=True)
+    df.ta.rsi(close="close", append=True)
     df["Date"] = df["Date"] + " " + df["Time"]
-    # df.set_index(pd.DatetimeIndex(df["Date"]), inplace=True)
     df["Zigzag"] = df["ZigzagMax"] + df["ZigzagMin"]
+    df = df.iloc[500:, :]
     trends = df[df["Zigzag"] > 0]
-    df = df[["Date", "High", "Open", "Close", "Low"]]
+    df = df[[
+        "Date", "High", "Open", "Close", "Low",
+        "AO_1_500", "SMA_500", "RSI_14"
+    ]]
     trends.reset_index(inplace=True)
     df = get_x_train(df, trends)
-    trends = trends[["Date"]]
+    df.reset_index(inplace=True, drop=True)
     print(df)
-    raise Exception
-    return df, trends
+    trends = trends[["Date"]]
+    df.to_csv("resources/test.csv")
+    print(colored('Data created successfully', 'green'))
