@@ -117,19 +117,22 @@ except IOError:
     model.save('resources/my_model.h5')
 
 
-predictions = model.predict(x_train)
-# predictions = scaler.inverse_transform(predictions)
-print("y_train: ", y_train, len(y_train))
-print("predictions: ", predictions, len(predictions))
+# predictions = model.predict(x_train)
+# # predictions = scaler.inverse_transform(predictions)
+# print("y_train: ", y_train, len(y_train))
+# print("predictions: ", predictions, len(predictions))
 
-# data = [[11846.0,11828.75,11758.0,11750.0,0]]
-# some = scaler.transform(data)
-# some = [[list(some[0][:-1])]]
-# print(some)
+data = [[
+    11216.8,11166.4,11210.3,11165.0,-935.4491600000001,12125.132479999998,51.11737110966051
+    ,0
+]]
+some = scaler.transform(data)
+some = [[list(some[0][:-1])]]
+print(some)
 
 
-# prediction_2 = model.predict(some)
-# print(prediction_2)
+prediction_2 = model.predict(some)
+print(prediction_2)
 
 
 
