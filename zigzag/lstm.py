@@ -7,6 +7,7 @@ from sklearn.preprocessing import MinMaxScaler, scale
 import joblib
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Masking
+from keras.layers import Dropout
 from keras.models import load_model
 import matplotlib.pyplot as plt
 from prepare_data import get_data
@@ -59,21 +60,28 @@ def get_dataset(train_data, trends, scaled_data):
     return X, Y
 
 
-def create_model():
+def create_model(shape_examples, shape_features):
     print(colored('Generating LSTM model.', 'yellow'))
+    print(colored(f'Shape {shape_examples}x{shape_features}', 'cyan'))
 
     model = Sequential()
     model.add(Masking(
         mask_value=MASK_VALUE,
-        input_shape=(None, 7)
+        input_shape=(shape_examples, shape_features)
     ))
     model.add(LSTM(
-        50, return_sequences=True,
-        input_shape=(None, 8)
+        units=50,
+        return_sequences=True,
     ))
-    model.add(LSTM(50, return_sequences=False))
-    model.add(Dense(25))
-    model.add(Dense(1))
+    model.add(Dropout(0.2))
+    model.add(LSTM(units=50, return_sequences=True))
+    model.add(Dropout(0.25))
+    model.add(LSTM(units=50, return_sequences=True))
+    model.add(Dropout(0.25))
+    model.add(LSTM(units=50))
+    model.add(Dropout(0.25))
+    model.add(Dense(units=1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
     return model
 
 
@@ -81,6 +89,7 @@ try:
     X = np.load('resources/X.npy')
     Y = np.load('resources/Y.npy')
     scaler = joblib.load("resources/scaler.save")
+    print(colored('Loaded storaged data.', 'green'))
 except FileNotFoundError:
     try:
         df = pd.read_csv("resources/test.csv")
@@ -107,13 +116,13 @@ x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 try:
-    print(colored('Model loaded successfully', 'green'))
     model = load_model('resources/my_model.h5')
+    print(colored('Model loaded successfully', 'green'))
 except IOError:
     print(colored('Training...', 'yellow'))
-    model = create_model()
+    model = create_model(X.shape[1], X.shape[-1])
     model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(x_train, y_train, batch_size=1, epochs=5)
+    model.fit(x_train, y_train, batch_size=32, epochs=100)
     model.save('resources/my_model.h5')
 
 
@@ -122,21 +131,22 @@ except IOError:
 # print("y_train: ", y_train, len(y_train))
 # print("predictions: ", predictions, len(predictions))
 
-data = [[
-    11216.8,11166.4,11210.3,11165.0,-935.4491600000001,12125.132479999998,51.11737110966051
-    ,0
-]]
+data = [
+    [12054.96,12020.91,12036.7,12014.96,248.9479399999982,11786.90934,50.513533759766055,-1],
+    [12044.91,12036.08,12034.15,12026.22,249.09552000000076,11787.3453,49.70259454415664,-1],
+    [12049.02,12034.02,12031.69,12028.75,251.9762099999989,11787.784479999998,48.887223039359164,-1],
+    [12036.75,12031.32,12013.87,12007.42,234.76174999999967,11788.198699999999,43.34059984386315,-1],
+    [12039.05,12014.49,12032.36,12008.79,236.16675000000032,11788.63108,49.715603419268476,-1],
+    [12041.89,12031.87,12039.15,12013.96,239.71710999999777,11789.13384,51.857765137955425,-1],
+    [12046.27,12038.91,12019.45,12017.83,243.35965000000033,11789.598659999998,45.76600060112602,-1],
+]
 some = scaler.transform(data)
-some = [[list(some[0][:-1])]]
-print(some)
-
+some = list(map(lambda x: list(x[:-1]), some))
+some.extend([[MASK_VALUE] * 7] * (135 - len(data)))
+some = [some]
 
 prediction_2 = model.predict(some)
 print(prediction_2)
-
-
-
-
 
 
 # create the testing data set
