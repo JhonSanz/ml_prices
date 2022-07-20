@@ -3,6 +3,8 @@ import pandas as pd
 import pandas_ta as ta
 
 
+CANDLES_PREDICTION = 1
+
 def get_x_train(train_data, trends):
     print(colored('Generating trends', 'yellow'))
     aux = train_data.copy()
@@ -43,9 +45,12 @@ def get_data():
         "AO_1_500", "SMA_500", "RSI_14"
     ]]
     trends.reset_index(inplace=True)
+    print(colored(f'Predict {CANDLES_PREDICTION} candles in the future', 'yellow'))
     df = get_x_train(df, trends)
+    df["trend"] = df["trend"].shift(-CANDLES_PREDICTION)
+    df = df.iloc[:-1, :]
     df.reset_index(inplace=True, drop=True)
-    print(df)
+    print(df.tail())
     trends = trends[["Date"]]
     df.to_csv("resources/test.csv")
     print(colored('Data created successfully', 'green'))

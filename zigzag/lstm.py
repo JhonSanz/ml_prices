@@ -140,14 +140,18 @@ data = [
     [12041.89,12031.87,12039.15,12013.96,239.71710999999777,11789.13384,51.857765137955425,-1],
     [12046.27,12038.91,12019.45,12017.83,243.35965000000033,11789.598659999998,45.76600060112602,-1],
 ]
-some = scaler.transform(data)
-some = list(map(lambda x: list(x[:-1]), some))
-some.extend([[MASK_VALUE] * 7] * (135 - len(data)))
-some = [some]
-
-prediction_2 = model.predict(some)
-print(prediction_2)
-
+total = len(data)
+results = []
+i = 0
+for _ in range(total):
+    some = scaler.transform(data)
+    some = list(map(lambda x: list(x[:-1]), some))
+    some.extend([[MASK_VALUE] * 7] * (135 - len(data)))
+    some = [some]
+    prediction_2 = model.predict(some)
+    results.append(prediction_2[0][0])
+    data = data[1:]
+print(results)
 
 # create the testing data set
 # test_data = scaled_data[training_data_len-60:, :]
