@@ -71,29 +71,29 @@ def create_model(shape_examples, shape_features):
 
 
 try:
-    X = np.load('resources/X_2.npy')
-    Y = np.load('resources/Y_2.npy')
-    scaler = joblib.load("resources/scaler_2.save")
+    X = np.load('resources/X_3.npy')
+    Y = np.load('resources/Y_3.npy')
+    scaler = joblib.load("resources/scaler_3.save")
     print(colored('Loaded storaged data.', 'green'))
 except FileNotFoundError:
     try:
         df = pd.read_csv("resources/test.csv")
-        df = df.iloc[:, 1:]
     except FileNotFoundError:
         print(colored('Creating missing file.', 'red'))
         get_data()
         df = pd.read_csv("resources/test.csv")
 
+    df = df.iloc[:, 1:]
     print(colored('Setting up parameters.', 'yellow'))
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(
         df.iloc[:, 1:].values
     )  # shape (70718, 8)
-    joblib.dump(scaler, "resources/scaler_2.save")
+    joblib.dump(scaler, "resources/scaler_3.save")
     X = get_dataset(scaled_data)
     Y = np.array(scaled_data[60:len(scaled_data), -1])
-    np.save("resources/X_2.npy", X)
-    np.save("resources/Y_2.npy", Y)
+    np.save("resources/X_3.npy", X)
+    np.save("resources/Y_3.npy", Y)
 
 print(colored(f'X shape: {X.shape}', 'cyan'))
 print(colored(f'Y shape: {Y.shape}', 'cyan'))
@@ -105,13 +105,13 @@ x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 try:
-    model = load_model('resources/my_model_2.h5')
+    model = load_model('resources/my_model_3.h5')
     print(colored('Model loaded successfully', 'green'))
 except IOError:
     print(colored('Training...', 'yellow'))
     model = create_model(X.shape[1], X.shape[-1])
     history = model.fit(x_train, y_train, batch_size=64, epochs=1)
-    model.save('resources/my_model_2.h5')
+    model.save('resources/my_model_3.h5')
     hist_df = pd.DataFrame(history.history)
     with open("resources/history.csv", mode='w') as f:
         hist_df.to_csv(f)
